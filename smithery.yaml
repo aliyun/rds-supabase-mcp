@@ -1,0 +1,101 @@
+# Smithery configuration file: https://smithery.ai/docs/build/project-config
+
+startCommand:
+  type: stdio
+  configSchema:
+    # JSON Schema defining the configuration options for the MCP.
+    type: object
+    oneOf:
+      - required:
+          - aliyunAccessKeyId
+          - aliyunAccessKeySecret
+      - required:
+          - supabaseUrl
+          - supabaseAnonKey
+    properties:
+      # Alibaba Cloud Mode
+      aliyunAccessKeyId:
+        type: string
+        description: Alibaba Cloud Access Key ID (for Aliyun mode)
+      aliyunAccessKeySecret:
+        type: string
+        description: Alibaba Cloud Access Key Secret (for Aliyun mode)
+      aliyunRegion:
+        type: string
+        description: Alibaba Cloud region (optional, for Aliyun mode)
+      # Single Instance Mode
+      supabaseUrl:
+        type: string
+        description: Self-hosted Supabase HTTP URL (for single instance mode)
+      supabaseAnonKey:
+        type: string
+        description: Supabase anonymous key (for single instance mode)
+      supabaseServiceRoleKey:
+        type: string
+        description: Supabase service role key (optional, for single instance mode)
+      databaseUrl:
+        type: string
+        description: Direct PostgreSQL connection string (optional, for single instance mode)
+      supabaseAuthJwtSecret:
+        type: string
+        description: Supabase JWT secret (optional, for single instance mode)
+      # Common
+      toolsConfig:
+        type: string
+        description: Path to tools config JSON (optional)
+      enableRagAgent:
+        type: boolean
+        description: Enable RAG agent (optional)
+  commandFunction:
+    # A JS function that produces the CLI command based on the given config to start the MCP on stdio.
+    |-
+    (config) => {
+      const args = ['dist/index.js'];
+
+      // Alibaba Cloud Mode
+      if (config.aliyunAccessKeyId && config.aliyunAccessKeySecret) {
+        args.push('--aliyun-ak', config.aliyunAccessKeyId);
+        args.push('--aliyun-sk', config.aliyunAccessKeySecret);
+        if (config.aliyunRegion) {
+          args.push('--aliyun-region', config.aliyunRegion);
+        }
+      }
+      // Legacy Mode
+      else if (config.supabaseUrl && config.supabaseAnonKey) {
+        args.push('--url', config.supabaseUrl);
+        args.push('--anon-key', config.supabaseAnonKey);
+        if (config.supabaseServiceRoleKey) {
+          args.push('--service-key', config.supabaseServiceRoleKey);
+        }
+        if (config.databaseUrl) {
+          args.push('--db-url', config.databaseUrl);
+        }
+        if (config.supabaseAuthJwtSecret) {
+          args.push('--jwt-secret', config.supabaseAuthJwtSecret);
+        }
+      }
+
+      // Common options
+      if (config.toolsConfig) {
+        args.push('--tools-config', config.toolsConfig);
+      }
+      if (config.enableRagAgent) {
+        args.push('--enable-rag-agent');
+      }
+
+      return { command: 'node', args };
+    }
+  exampleConfig:
+    # Alibaba Cloud Mode Example
+    aliyunAccessKeyId: your-access-key-id
+    aliyunAccessKeySecret: your-access-key-secret
+    aliyunRegion: cn-hangzhou
+    # Single Instance Mode Example (comment out Aliyun config to use this)
+    # supabaseUrl: https://supabase.example.com
+    # supabaseAnonKey: your-anon-key
+    # supabaseServiceRoleKey: your-service-role-key
+    # databaseUrl: postgresql://postgres:<password>@db.example.com:5432/postgres
+    # supabaseAuthJwtSecret: your-jwt-secret
+    # Common
+    enableRagAgent: false
+    toolsConfig: ./mcp-tools.json
